@@ -1,14 +1,15 @@
+<pre>
 # PushNotification
 Fires push notifications to all users with same gender within the same state or same city
 
 Database Structure (NOSQL)
 
 Users
-  |-{userId}\
-        |-"token": {tokenString},\
-        |-"PreferenceNotification": {Bool},\
-        |-"signedIn": {Bool}\
-        |- ...\
+  |-{userId}
+        |-"token": {tokenString},
+        |-"PreferenceNotification": {Bool},
+        |-"signedIn": {Bool}
+        |- ...
         
 UserPreference
       |-"location"
@@ -32,3 +33,4 @@ Request
           |-"lookingFor": {Male/Female/Anyone}
           |- ...
           
+</pre>
