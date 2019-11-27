@@ -4,7 +4,7 @@ Fires push notifications to all users with same gender within the same state or 
 Database Structure (NOSQL)
 
 Users
-  |-{userId}\n
+  |-{userId}\
         |-"token": {tokenString},
         |-"PreferenceNotification": {Bool},
         |-"signedIn": {Bool}
