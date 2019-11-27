@@ -5,10 +5,10 @@ Database Structure (NOSQL)
 
 Users
   |-{userId}\
-        |-"token": {tokenString},
-        |-"PreferenceNotification": {Bool},
-        |-"signedIn": {Bool}
-        |- ...
+        |-"token": {tokenString},\
+        |-"PreferenceNotification": {Bool},\
+        |-"signedIn": {Bool}\
+        |- ...\
         
 UserPreference
       |-"location"
