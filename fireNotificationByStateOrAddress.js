@@ -5,8 +5,17 @@ exports.handler = (event, context) => {
 
 	const requestRef = db.ref('/single-request/'+requestKey);
 
+	/*determines whether to send notification by users in the matching state, or matching city*/
 	const notifyBy = 'state'
 	//const notifyBy = 'address'
+
+	var tokens = [];
+
+	var onComplete = function(reqSnap) {
+	    checkTokenArray(tokens, reqSnap);
+	    context.status(200).end();
+	    return;
+	};
 
 	return requestRef.once('value', (requestSnap) => {
 		if (!requestSnap.exists()){
@@ -40,48 +49,62 @@ exports.handler = (event, context) => {
 			
 			return preferenceRef.once('value', (prefUserSnap) => {
 					const prefUserList = snapshotToArray(prefUserSnap);
-					var tokenArray = [];
-					return checkPreferenceUsers(prefUserList, tokenArray, requestSnap);
-					
+					var tasksToGo = prefUserList.length;
+
+					prefUserList.forEach((user) => {
+						getUserToken(user, requestToken).then((result) => {
+							//if token already exists in tokens array do not push
+							if (tokens.indexOf(result) === -1){
+								tokens.push(result);
+							}
+							//if all users are checked
+							if (--tasksToGo === 0){
+								onComplete(requestSnap);
+							}
+							return;
+						}).catch((err) => {
+							if (err){
+								--tasksToGo;
+							}
+						});
+					});	
 			});
 		}
 	});
 }
 
-function checkPreferenceUsers(prefList, tokenArr, reqSnap){
+function getUserToken(userId, reqToken) {
 	const admin = require('firebase-admin');
 	const db = admin.database();
 	const userRef = db.ref('/users');
-	const reqVal = reqSnap.val();
-	const reqToken = reqVal.userToken;
 
-	if (!prefList.length){
-		return checkTokenArray(tokenArr, reqSnap);
-	}
-	const prefUserId = prefList.shift();
-	db.ref('/users/'+prefUserId).once('value', (userSnap) => {
-		if (userSnap.exists()){
-			const userVal = userSnap.val();
-			var userToken = userVal.token;
+	return new Promise(function(resolve, reject){
+		db.ref('/users/'+userId).once('value', (userSnap) => {
+			if (userSnap.exists()){
+				const userVal = userSnap.val();
+				var userToken = userVal.token;
 
-			//check if user is logged in
-			if ((typeof userToken !== 'undefined') || (userToken !== null)) {
-				const preferenceNotification = userVal.preferenceNotification;
-				const signedIn = userVal.signedIn;
+				if ((typeof userToken !== 'undefined') || (userToken !== null)) {
+					const preferenceNotification = userVal.preferenceNotification;
+					const signedIn = userVal.signedIn;
 
-				//prevent sending notification to the user who created this request
-				//check if same token exists in the tokenArray
-				//check if user enabled notification
-				//check if user is signed in
-				if ((reqToken !== userToken) && (tokenArr.indexOf(userToken) === -1) && preferenceNotification && signedIn){
-					tokenArr.push(userToken);
+					if ((reqToken === userToken)){
+						reject(new Error("request is created by this user"));
+					}else if (!preferenceNotification){
+						reject(new Error("user is not receiving preference notification"));
+					}else if (!signedIn){
+						reject(new Error("user is not signed in"));
+					}else{
+						resolve(userToken);
+					}
+
+				}else{
+					reject(new Error("user does not have push notification token"));
 				}
+			}else{
+				reject(new Error("user does not exist in db"));
 			}
-		}else{
-			console.log('user dne: '+ prefUserId);
-		}
-		
-		checkPreferenceUsers(prefList, tokenArr, reqSnap);
+		});
 	});
 }
 
